@@ -32,8 +32,8 @@ public class CatalogParsers {
 
         assert subject != null && number != null && fullName != null;
         return new CatalogScraper.CourseIdentifierName(
-            new CourseIdentifier(subject, Integer.parseInt(number)),
-            fullName);
+                new CourseIdentifier(subject, Integer.parseInt(number)), fullName
+        );
     }
 
     // Course credits
@@ -47,11 +47,9 @@ public class CatalogParsers {
 
         assert creditCount != null;
         return new Credit(
-            Double.parseDouble(creditCount),
-            creditsVariable,
-            repetitions != null ? Integer.parseInt(repetitions) : 0,
-            repeatable,
-            passOrFail);
+                Double.parseDouble(creditCount), creditsVariable,
+                repetitions != null ? Integer.parseInt(repetitions) : 0, repeatable, passOrFail
+        );
     }
 
     // Lec-Rec-Lab count breakdown
@@ -63,9 +61,8 @@ public class CatalogParsers {
 
         assert lec != null && rec != null && lab != null;
         return new LecRecLab(
-            Double.parseDouble(lec),
-            Double.parseDouble(rec),
-            Double.parseDouble(lab));
+                Double.parseDouble(lec), Double.parseDouble(rec), Double.parseDouble(lab)
+        );
     }
 
     // Semesters a course is offered
@@ -109,8 +106,8 @@ public class CatalogParsers {
         // Iterate over all matches
         while (subjectMatcher.find() && numberMatcher.find()) {
             courses.addLast(new CourseIdentifier(
-                subjectMatcher.group(),
-                Integer.parseInt(numberMatcher.group())));
+                subjectMatcher.group(), Integer.parseInt(numberMatcher.group())
+            ));
         }
 
         assert !courses.isEmpty();
@@ -148,9 +145,8 @@ public class CatalogParsers {
 
             assert type != null;
             restrictions.addLast(new Restriction(
-                type,
-                components,
-                conditionRequired));
+                    type, components, conditionRequired
+            ));
         }
 
         assert !restrictions.isEmpty();

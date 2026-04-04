@@ -74,13 +74,9 @@ public class CatalogScraper {
 
                     // Create course
                     courses.addLast(new Course(
-                            name.identifier(),
-                            name.name(),
-                            courseDescription,
-                            credit,
-                            lecRecLab,
-                            semesters,
-                            restrictions));
+                            name.identifier(), name.name(), courseDescription, credit, lecRecLab, semesters,
+                            restrictions, corequisites
+                    ));
 
                     // Reset properties
                     name = null;
