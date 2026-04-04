@@ -5,6 +5,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 // Scrapes the main course catalog
 public class CatalogScraper {
@@ -28,6 +29,7 @@ public class CatalogScraper {
 
         // Parse each course in catalog
         Element article = catalog.getElementById("content_body");
+        if (article == null) return false;
         for (Element element : article.children()) {
 
             CourseName name;
@@ -35,6 +37,7 @@ public class CatalogScraper {
             Credits credits;
             LecRecLab lecRecLab;
             Semesters semesters;
+            ArrayList<Course> corequisites;
 
             switch (element.tag().name()) {
                 // h4: Course subject, number, and name
@@ -51,8 +54,8 @@ public class CatalogScraper {
                             case "Credits:" -> { credits = CatalogParsers.parseCredits(text); }
                             case "Lec-Rec-Lab:" -> { lecRecLab = CatalogParsers.parseLecRecLab(text); }
                             case "Semesters Offered:" -> { semesters = CatalogParsers.parseSemesters(text); }
-                            case "Restrictions:" -> {}
-                            case "Co-Requisite(s):" -> {}
+                            case "Restrictions:" -> { System.out.println(text); }
+                            case "Co-Requisite(s):" -> { corequisites = CatalogParsers.parseCorequisites(text); }
                             case "Pre-Requisite(s):" -> {}
                         }
                     }
@@ -70,4 +73,5 @@ public class CatalogScraper {
     protected record LecRecLab(int lectures, int recitations, int labs) {};
     protected record Semesters(boolean fallOdd, boolean springOdd, boolean summerOdd, boolean onDemandOdd,
                                boolean fallEven, boolean springEven, boolean summerEven, boolean onDemandEven) {};
+    protected record Course(String subject, String number) {};
 }

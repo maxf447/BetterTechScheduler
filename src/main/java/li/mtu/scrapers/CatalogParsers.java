@@ -1,5 +1,6 @@
 package li.mtu.scrapers;
 
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,7 +32,6 @@ public class CatalogParsers {
     // Course credits
     // Format: "<variable to 3.0|3.0>; [Repeatable to a max of 3|May be repeated]; [Graded Pass/Fail Only]"
     protected static CatalogScraper.Credits parseCredits(String credits) {
-        System.out.println(credits);
         String creditCount = parse("[0-9]+\\.[0-9]", credits);                      // Matches credits: "3.0"
         boolean creditsVariable = exists("variable to", credits);                   // Matches "variable to" anywhere
         boolean repeatable = exists("(May be repeated|Repeatable)", credits);       // Matches "May be repeated" or "Repeatable" anywhere
@@ -86,5 +86,21 @@ public class CatalogParsers {
                 spring && !springOddOnly,
                 summer && !summerOddOnly,
                 onDemand && !onDemandOddOnly);
+    }
+
+    // Corequisites a course has
+    // Format: "MA 2160, MA 1160, [...]"
+    protected static ArrayList<CatalogScraper.Course> parseCorequisites(String text) {
+        Matcher subjectMatcher = Pattern.compile("[A-Z]{2,4}").matcher(text);
+        Matcher numberMatcher = Pattern.compile("[0-9]{4}").matcher(text);
+        ArrayList<CatalogScraper.Course> courses = new ArrayList<>();
+
+        // Iterate over all matches
+        while (subjectMatcher.find() && numberMatcher.find()) {
+            courses.addLast(new CatalogScraper.Course(
+                subjectMatcher.group(),
+                numberMatcher.group()));
+        }
+        return courses;
     }
 }
