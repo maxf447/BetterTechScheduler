@@ -20,58 +20,87 @@ public class CatalogScraper {
     public static boolean scrapeCatalog(String url) {
         // Download catalog
         Document catalog;
-        try {
-            catalog = Jsoup.connect(url).get();
-        }
-        catch (IOException e) {
-            return false;
-        }
+        try { catalog = Jsoup.connect(url).get(); }
+        catch (IOException e) { return false; }
 
         // Parse each course in catalog
         Element article = catalog.getElementById("content_body");
         if (article == null) return false;
-        for (Element element : article.children()) {
 
-            CourseName name;
-            String courseDescription;
-            Credits credits;
-            LecRecLab lecRecLab;
-            Semesters semesters;
-            ArrayList<Course> corequisites;
+        // Properties we'll read from each course
+        CourseLabel name = null;
+        String courseDescription = null;
+        Credits credits = null;
+        LecRecLab lecRecLab = null;
+        Semesters semesters = null;
+        // These are empty arrays by default since if not found it means we have none of them
+        ArrayList<CourseLabelShort> corequisites = new ArrayList<>();
+        ArrayList<Restriction> restrictions = new ArrayList<>();
+
+        for (Element element : article.children()) {
 
             switch (element.tag().name()) {
                 // h4: Course subject, number, and name
-                case "h4" -> { name = CatalogParsers.parseName(element.text()); }
+                case "h4" -> name = CatalogParsers.parseName(element.text());
                 // p: Course description
-                case "p" -> { courseDescription = element.val(); }
+                case "p" -> courseDescription = element.text();
                 // ul: Course attributes
                 case "ul" -> {
+                    // Skip if this ul isn't an attributes ul
+                    if (!element.className().equals("none")) continue;
+
                     // Iterate over each attribute
                     for (Element attr : element.children()) {
                         String text = attr.textNodes().getLast().text();
                         // First element contains identifier for attribute
                         switch (attr.children().getFirst().text()) {
-                            case "Credits:" -> { credits = CatalogParsers.parseCredits(text); }
-                            case "Lec-Rec-Lab:" -> { lecRecLab = CatalogParsers.parseLecRecLab(text); }
-                            case "Semesters Offered:" -> { semesters = CatalogParsers.parseSemesters(text); }
-                            case "Restrictions:" -> { System.out.println(text); }
-                            case "Co-Requisite(s):" -> { corequisites = CatalogParsers.parseCorequisites(text); }
-                            case "Pre-Requisite(s):" -> {}
+                            case "Credits:" -> credits = CatalogParsers.parseCredits(text);
+                            case "Lec-Rec-Lab:" -> lecRecLab = CatalogParsers.parseLecRecLab(text);
+                            case "Semesters Offered:" -> semesters = CatalogParsers.parseSemesters(text);
+                            case "Restrictions:" -> restrictions = CatalogParsers.parseRestrictions(text);
+                            case "Co-Requisite(s):" -> corequisites = CatalogParsers.parseCorequisites(text);
+                            case "Pre-Requisite(s):" -> {} // TODO: prerequisites
                         }
                     }
 
-                    // This is the last element in each course list, so we can now save the course
+                    System.out.printf("Course name: %s\n", name);
+                    System.out.printf("Description: %s\n", courseDescription);
+                    System.out.printf("Credits: %s\n", credits);
+                    System.out.printf("LecRecLab: %s\n", lecRecLab);
+                    System.out.printf("Semesters: %s\n", semesters);
+                    System.out.printf("Corequisites: %s\n", corequisites);
+                    System.out.printf("Restrictions: %s\n", restrictions);
+
+                    // ul is the final element; all of these should be populated by the time it's done being read
+                    assert name != null && courseDescription != null && credits != null && semesters != null &&
+                            corequisites != null && restrictions != null;
+
+                    // Reset properties
+                    name = null;
+                    courseDescription = null;
+                    credits = null;
+                    lecRecLab = null;
+                    semesters = null;
+                    corequisites = new ArrayList<>();
+                    restrictions = new ArrayList<>();
+
+                    // TODO: Construct a course object and save somewhere
                 }
             }
         }
         return true;
     }
 
-    protected record CourseName(String subject, String number, String name) {};
+    protected record CourseLabel(String subject, String number, String name) {}
     protected record Credits(double credits, boolean creditsVariable, int maxRepetitions,
-                             boolean repeatable, boolean passOrFail) {};
-    protected record LecRecLab(int lectures, int recitations, int labs) {};
+                             boolean repeatable, boolean passOrFail) {}
+    protected record LecRecLab(double lectures, double recitations, double labs) {}
     protected record Semesters(boolean fallOdd, boolean springOdd, boolean summerOdd, boolean onDemandOdd,
-                               boolean fallEven, boolean springEven, boolean summerEven, boolean onDemandEven) {};
-    protected record Course(String subject, String number) {};
+                               boolean fallEven, boolean springEven, boolean summerEven, boolean onDemandEven) {}
+    protected record CourseLabelShort(String subject, String number) {}
+    protected record Restriction(RestrictionType type, ArrayList<String> components, boolean conditionRequired) {}
+
+    protected enum RestrictionType { CLASS_RESTRICTION, MAJOR_RESTRICTION, LEVEL_RESTRICTION, COLLEGE_RESTRICTION,
+                                     CAMPUS_RESTRICTION, INSTRUCTOR_PERMISSION, DEPARTMENT_PERMISSION,
+                                     INSTRUCTOR_AND_DEPARTMENT_PERMISSION }
 }
