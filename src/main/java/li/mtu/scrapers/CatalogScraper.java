@@ -1,11 +1,14 @@
 package li.mtu.scrapers;
 
+import li.mtu.structures.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
 
 // Scrapes the main course catalog
 public class CatalogScraper {
@@ -13,28 +16,34 @@ public class CatalogScraper {
     private static final String GRADUATE_CATALOG_URL = "https://www.banweb.mtu.edu/pls/owa/stu_ctg_utils.p_online_all_courses_gr";
 
     // Scrape both catalogs
-    public static boolean scrapeCatalogs() {
-        return scrapeCatalog(UNDERGRADUATE_CATALOG_URL) && scrapeCatalog(GRADUATE_CATALOG_URL);
+    public static ArrayList<Course> scrapeCatalogs() {
+        List<Course> undergraduateCatalog = scrapeCatalog(UNDERGRADUATE_CATALOG_URL);
+        List<Course> graduateCatalog = scrapeCatalog(GRADUATE_CATALOG_URL);
+        assert undergraduateCatalog != null && graduateCatalog != null;
+        return (ArrayList<Course>) Stream.concat(undergraduateCatalog.stream(), graduateCatalog.stream()).toList();
     }
 
-    public static boolean scrapeCatalog(String url) {
+    private static ArrayList<Course> scrapeCatalog(String url) {
         // Download catalog
         Document catalog;
         try { catalog = Jsoup.connect(url).get(); }
-        catch (IOException e) { return false; }
+        catch (IOException e) { return null; }
 
         // Parse each course in catalog
         Element article = catalog.getElementById("content_body");
-        if (article == null) return false;
+        if (article == null) return null;
+
+        // Output array for courses
+        ArrayList<Course> courses = new ArrayList<>();
 
         // Properties we'll read from each course
-        CourseLabel name = null;
+        CourseIdentifierName name = null;
         String courseDescription = null;
-        Credits credits = null;
+        Credit credit = null;
         LecRecLab lecRecLab = null;
-        Semesters semesters = null;
+        ArrayList<Semester> semesters = null;
         // These are empty arrays by default since if not found it means we have none of them
-        ArrayList<CourseLabelShort> corequisites = new ArrayList<>();
+        ArrayList<CourseIdentifier> corequisites = new ArrayList<>();
         ArrayList<Restriction> restrictions = new ArrayList<>();
 
         for (Element element : article.children()) {
@@ -54,7 +63,7 @@ public class CatalogScraper {
                         String text = attr.textNodes().getLast().text();
                         // First element contains identifier for attribute
                         switch (attr.children().getFirst().text()) {
-                            case "Credits:" -> credits = CatalogParsers.parseCredits(text);
+                            case "Credits:" -> credit = CatalogParsers.parseCredit(text);
                             case "Lec-Rec-Lab:" -> lecRecLab = CatalogParsers.parseLecRecLab(text);
                             case "Semesters Offered:" -> semesters = CatalogParsers.parseSemesters(text);
                             case "Restrictions:" -> restrictions = CatalogParsers.parseRestrictions(text);
@@ -65,42 +74,39 @@ public class CatalogScraper {
 
                     System.out.printf("Course name: %s\n", name);
                     System.out.printf("Description: %s\n", courseDescription);
-                    System.out.printf("Credits: %s\n", credits);
+                    System.out.printf("Credits: %s\n", credit);
                     System.out.printf("LecRecLab: %s\n", lecRecLab);
                     System.out.printf("Semesters: %s\n", semesters);
                     System.out.printf("Corequisites: %s\n", corequisites);
                     System.out.printf("Restrictions: %s\n", restrictions);
 
                     // ul is the final element; all of these should be populated by the time it's done being read
-                    assert name != null && courseDescription != null && credits != null && semesters != null &&
-                            corequisites != null && restrictions != null;
+                    assert name != null && courseDescription != null && credit != null && semesters != null;
+
+                    // Create course
+                    courses.addLast(new Course(
+                            name.identifier(),
+                            name.name(),
+                            courseDescription,
+                            credit,
+                            lecRecLab,
+                            semesters,
+                            restrictions));
 
                     // Reset properties
                     name = null;
                     courseDescription = null;
-                    credits = null;
+                    credit = null;
                     lecRecLab = null;
                     semesters = null;
                     corequisites = new ArrayList<>();
                     restrictions = new ArrayList<>();
 
-                    // TODO: Construct a course object and save somewhere
                 }
             }
         }
-        return true;
+        return courses;
     }
 
-    protected record CourseLabel(String subject, String number, String name) {}
-    protected record Credits(double credits, boolean creditsVariable, int maxRepetitions,
-                             boolean repeatable, boolean passOrFail) {}
-    protected record LecRecLab(double lectures, double recitations, double labs) {}
-    protected record Semesters(boolean fallOdd, boolean springOdd, boolean summerOdd, boolean onDemandOdd,
-                               boolean fallEven, boolean springEven, boolean summerEven, boolean onDemandEven) {}
-    protected record CourseLabelShort(String subject, String number) {}
-    protected record Restriction(RestrictionType type, ArrayList<String> components, boolean conditionRequired) {}
-
-    protected enum RestrictionType { CLASS_RESTRICTION, MAJOR_RESTRICTION, LEVEL_RESTRICTION, COLLEGE_RESTRICTION,
-                                     CAMPUS_RESTRICTION, INSTRUCTOR_PERMISSION, DEPARTMENT_PERMISSION,
-                                     INSTRUCTOR_AND_DEPARTMENT_PERMISSION }
+    protected record CourseIdentifierName(CourseIdentifier identifier, String name) {}
 }
