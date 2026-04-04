@@ -7,8 +7,6 @@ import org.jsoup.nodes.Element;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Stream;
 
 // Scrapes the main course catalog
 public class CatalogScraper {
@@ -17,10 +15,10 @@ public class CatalogScraper {
 
     // Scrape both catalogs
     public static ArrayList<Course> scrapeCatalogs() {
-        List<Course> undergraduateCatalog = scrapeCatalog(UNDERGRADUATE_CATALOG_URL);
-        List<Course> graduateCatalog = scrapeCatalog(GRADUATE_CATALOG_URL);
-        assert undergraduateCatalog != null && graduateCatalog != null;
-        return (ArrayList<Course>) Stream.concat(undergraduateCatalog.stream(), graduateCatalog.stream()).toList();
+        ArrayList<Course> catalog = new ArrayList<>();
+        catalog.addAll(scrapeCatalog(UNDERGRADUATE_CATALOG_URL));
+        catalog.addAll(scrapeCatalog(GRADUATE_CATALOG_URL));
+        return catalog;
     }
 
     private static ArrayList<Course> scrapeCatalog(String url) {
@@ -47,7 +45,6 @@ public class CatalogScraper {
         ArrayList<Restriction> restrictions = new ArrayList<>();
 
         for (Element element : article.children()) {
-
             switch (element.tag().name()) {
                 // h4: Course subject, number, and name
                 case "h4" -> name = CatalogParsers.parseName(element.text());
@@ -71,14 +68,6 @@ public class CatalogScraper {
                             case "Pre-Requisite(s):" -> {} // TODO: prerequisites
                         }
                     }
-
-                    System.out.printf("Course name: %s\n", name);
-                    System.out.printf("Description: %s\n", courseDescription);
-                    System.out.printf("Credits: %s\n", credit);
-                    System.out.printf("LecRecLab: %s\n", lecRecLab);
-                    System.out.printf("Semesters: %s\n", semesters);
-                    System.out.printf("Corequisites: %s\n", corequisites);
-                    System.out.printf("Restrictions: %s\n", restrictions);
 
                     // ul is the final element; all of these should be populated by the time it's done being read
                     assert name != null && courseDescription != null && credit != null && semesters != null;
