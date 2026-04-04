@@ -33,6 +33,8 @@ public class CatalogScraper {
             CourseName name;
             String courseDescription;
             Credits credits;
+            LecRecLab lecRecLab;
+            Semesters semesters;
 
             switch (element.tag().name()) {
                 // h4: Course subject, number, and name
@@ -47,8 +49,8 @@ public class CatalogScraper {
                         // First element contains identifier for attribute
                         switch (attr.children().getFirst().text()) {
                             case "Credits:" -> { credits = CatalogParsers.parseCredits(text); }
-                            case "Lec-Rec-Lab:" -> {}
-                            case "Semesters Offered:" -> {}
+                            case "Lec-Rec-Lab:" -> { lecRecLab = CatalogParsers.parseLecRecLab(text); }
+                            case "Semesters Offered:" -> { semesters = CatalogParsers.parseSemesters(text); }
                             case "Restrictions:" -> {}
                             case "Co-Requisite(s):" -> {}
                             case "Pre-Requisite(s):" -> {}
@@ -63,5 +65,9 @@ public class CatalogScraper {
     }
 
     protected record CourseName(String subject, String number, String name) {};
-    protected record Credits(double credits, boolean creditsVariable, int maxRepetitions, boolean repeatable, boolean passOrFail) {};
+    protected record Credits(double credits, boolean creditsVariable, int maxRepetitions,
+                             boolean repeatable, boolean passOrFail) {};
+    protected record LecRecLab(int lectures, int recitations, int labs) {};
+    protected record Semesters(boolean fallOdd, boolean springOdd, boolean summerOdd, boolean onDemandOdd,
+                               boolean fallEven, boolean springEven, boolean summerEven, boolean onDemandEven) {};
 }

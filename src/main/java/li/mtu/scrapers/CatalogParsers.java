@@ -36,14 +36,55 @@ public class CatalogParsers {
         boolean creditsVariable = exists("variable to", credits);                   // Matches "variable to" anywhere
         boolean repeatable = exists("(May be repeated|Repeatable)", credits);       // Matches "May be repeated" or "Repeatable" anywhere
         String repetitions = parse("(?<=Repeatable to a Max of )[0-9]+", credits);  // Matches number after "Repeatable to a Max of "
-        boolean passOrFail = exists("Graded Pass/Fail Only", credits);             // Matches "Graded Pass/Fail Only" text
+        boolean passOrFail = exists("Graded Pass/Fail Only", credits);              // Matches "Graded Pass/Fail Only" text
 
         return new CatalogScraper.Credits(
             creditCount != null ? Double.parseDouble(creditCount) : 0,
             creditsVariable,
             repetitions != null ? Integer.parseInt(repetitions) : 0,
             repeatable,
-            passOrFail
-        );
+            passOrFail);
+    }
+
+    // Lec-Rec-Lab count breakdown
+    // Format: "(3-0-0)"
+    protected static CatalogScraper.LecRecLab parseLecRecLab(String lecRecLab) {
+        String lec = parse("(?<=\\()[0-9](?=,)", lecRecLab);    // Matches first component
+        String rec = parse("(?<=,)[0-9](?=,)", lecRecLab);      // Matches second component
+        String lab = parse("(?<=,)[0-9](?=\\))", lecRecLab);    // Matches third component
+
+        return new CatalogScraper.LecRecLab(
+            lec != null ? Integer.parseInt(lec) : 0,
+            rec != null ? Integer.parseInt(rec) : 0,
+            lab != null ? Integer.parseInt(lab) : 0);
+    }
+
+    // Semesters a course is offered
+    // Format: "<Fall|Spring|Summer>[, in <odd|even> years]" (repeated for each semester)
+    protected static CatalogScraper.Semesters parseSemesters(String semesters) {
+        boolean fall = exists("Fall", semesters);
+        boolean spring = exists("Spring", semesters);
+        boolean summer = exists("Summer", semesters);
+        boolean onDemand = exists("On Demand", semesters);
+
+        boolean fallOddOnly = exists("Fall, in odd years", semesters);
+        boolean springOddOnly = exists("Spring, in odd years", semesters);
+        boolean summerOddOnly = exists("Summer, in odd years", semesters);
+        boolean onDemandOddOnly = exists("On Demand, in odd years", semesters);
+
+        boolean fallEvenOnly = exists("Fall, in even years", semesters);
+        boolean springEvenOnly = exists("Spring, in even years", semesters);
+        boolean summerEvenOnly = exists("Summer, in even years", semesters);
+        boolean onDemandEvenOnly = exists("On Demand, in even years", semesters);
+
+        return new CatalogScraper.Semesters(
+                fall && !fallEvenOnly,
+                spring && !springEvenOnly,
+                summer && !summerEvenOnly,
+                onDemand && !onDemandEvenOnly,
+                fall && !fallOddOnly,
+                spring && !springOddOnly,
+                summer && !summerOddOnly,
+                onDemand && !onDemandOddOnly);
     }
 }
