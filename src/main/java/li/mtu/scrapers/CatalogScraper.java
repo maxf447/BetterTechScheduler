@@ -40,8 +40,9 @@ public class CatalogScraper {
         Credit credit = null;
         LecRecLab lecRecLab = null;
         ArrayList<Semester> semesters = null;
-        // These are empty arrays by default since if not found it means we have none of them
+        // These are empty by default since if not found it means we have none of them
         ArrayList<CourseIdentifier> corequisites = new ArrayList<>();
+        Prerequisites prerequisites = new Prerequisites(new ArrayList<>(), PrerequisiteOperator.OR);
         ArrayList<Restriction> restrictions = new ArrayList<>();
 
         for (Element element : article.children()) {
@@ -65,7 +66,7 @@ public class CatalogScraper {
                             case "Semesters Offered:" -> semesters = CatalogParsers.parseSemesters(text);
                             case "Restrictions:" -> restrictions = CatalogParsers.parseRestrictions(text);
                             case "Co-Requisite(s):" -> corequisites = CatalogParsers.parseCorequisites(text);
-                            case "Pre-Requisite(s):" -> {} // TODO: prerequisites
+                            case "Pre-Requisite(s):" -> prerequisites = CatalogParsers.parsePrerequisites(text);
                         }
                     }
 
@@ -75,7 +76,7 @@ public class CatalogScraper {
                     // Create course
                     courses.addLast(new Course(
                             name.identifier(), name.name(), courseDescription, credit, lecRecLab, semesters,
-                            restrictions, corequisites
+                            restrictions, corequisites, prerequisites
                     ));
 
                     // Reset properties
@@ -86,7 +87,7 @@ public class CatalogScraper {
                     semesters = null;
                     corequisites = new ArrayList<>();
                     restrictions = new ArrayList<>();
-
+                    prerequisites = new Prerequisites(new ArrayList<>(), PrerequisiteOperator.OR);
                 }
             }
         }

@@ -2,4 +2,4 @@ package li.mtu.structures;
 
 import java.util.ArrayList;
 
-public record Restriction(String type, ArrayList<String> components, boolean conditionRequired) {}
+public record Restriction(RestrictionType type, ArrayList<String> components, RestrictionMode mode) {}

@@ -122,22 +122,35 @@ public class CatalogParsers {
         // Split on semicolons to process each restriction individually
         ArrayList<Restriction> restrictions = new ArrayList<>();
         for (String part : text.split("; ")) {
-            String type = null;
+            RestrictionType type = null;
             ArrayList<String> components = null;
-            boolean conditionRequired = true;
+            RestrictionMode mode = RestrictionMode.REQUIRED;
 
             // Permission restriction
             if (exists("Permission of instructor required", part))
-                type = "PermissionInstructor";
+                type = RestrictionType.INSTRUCTOR_PERMISSION;
             else if (exists("Permission of department required", part))
-                type = "PermissionDepartment";
+                type = RestrictionType.DEPARTMENT_PERMISSION;
             else if (exists("Permission of instructor and department required", part))
-                type = "PermissionInstructorDepartment";
+                type = RestrictionType.INSTRUCTOR_AND_DEPARTMENT_PERMISSION;
 
             // Other restriction
             else if (exists("(Must|May not) be enrolled in one of the following", part)) {
-                conditionRequired = exists("May not be enrolled in one of the following", part);
-                type = parse("(?<=one of the following )[A-Za-z]+(?=\\()", part);
+                if (exists("May not be enrolled in one of the following", part))
+                    mode = RestrictionMode.FORBIDDEN;
+
+                // Parse restriction type
+                String typeString = parse("(?<=one of the following )[A-Za-z]+(?=\\()", part);
+                assert typeString != null;
+                switch (typeString) {
+                    case "Class" -> type = RestrictionType.CLASS_RESTRICTION;
+                    case "Major" -> type = RestrictionType.MAJOR_RESTRICTION;
+                    case "Level" -> type = RestrictionType.LEVEL_RESTRICTION;
+                    case "College" -> type = RestrictionType.COLLEGE_RESTRICTION;
+                    case "Campus" -> type = RestrictionType.CAMPUS_RESTRICTION;
+                }
+
+                // Parse components of restriction
                 String componentText = parse("(?<=\\): ).*", part);
                 assert componentText != null;
                 components = new ArrayList<>(Arrays.asList(componentText.split(", ")));
@@ -145,11 +158,16 @@ public class CatalogParsers {
 
             assert type != null;
             restrictions.addLast(new Restriction(
-                    type, components, conditionRequired
+                    type, components, mode
             ));
         }
 
         assert !restrictions.isEmpty();
         return restrictions;
+    }
+
+    // Prerequisites a course has
+    protected static Prerequisites parsePrerequisites(String text) {
+        return null;
     }
 }
