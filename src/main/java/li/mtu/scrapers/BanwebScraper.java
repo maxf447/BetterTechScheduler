@@ -3,15 +3,7 @@ package li.mtu.scrapers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import li.mtu.structures.Attribute;
-import li.mtu.structures.CatalogCourse;
-import li.mtu.structures.Course;
-import li.mtu.structures.Term;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.nodes.TextNode;
-import org.w3c.dom.Attr;
+import li.mtu.structures.*;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -30,11 +22,11 @@ public class BanwebScraper {
         this.token = token;
     }
 
-    public ArrayList<Term> getTerms() {
+    public static ArrayList<Term> getTerms() {
         // Make a request to https://banweb.mtu.edu/StudentRegistrationSelfService/ssb/classSearch/getTerms
         JsonNode termData;
         try {
-            termData = mapper.readTree(makeGETRequest("classSearch/getTerms", "offset&1&max=500", token));
+            termData = mapper.readTree(makeGETRequest("classSearch/getTerms", "offset=1&max=500", ""));
         }
         catch (JsonProcessingException e) { return null; }
 
@@ -46,14 +38,31 @@ public class BanwebScraper {
         return terms;
     }
 
-    // TODO: Scrape the sections for a term
-    public ArrayList<Object> scrapeSections(Term term) {
-        // Send POST to https://banweb.mtu.edu/StudentRegistrationSelfService/ssb/term/search?mode=search to enable scraping
+    public ArrayList<Section> scrapeSections(Term term) {
+        // Send POST to API to enable scraping
         makePOSTRequest("term/search", "mode=search", String.format("term=%d", term.code()), token);
 
-        // Send GETs to https://banweb.mtu.edu/StudentRegistrationSelfService/ssb/searchResults/searchResults?txt_term=202608&pageOffset=0&pageMaxSize=500
+        // Iteratively fetch sections
+        int offset = 0;
+        int totalCount = Integer.MAX_VALUE;
+        ArrayList<Section> sections = new ArrayList<>();
+        // TODO: fix not working at all
+        while (offset < totalCount) {
+            JsonNode sectionData;
+            try {
+                sectionData = mapper.readTree(makeGETRequest("searchResults/searchResults",
+                        String.format("txt_term=%s&pageOffset=%s&pageMaxSize=500", term.code(), offset), token));
+            }
+            catch (JsonProcessingException e) { return null; }
+            totalCount = sectionData.get("totalCount").asInt();
 
-        return null;
+            for (JsonNode section : sectionData.get("data")) {
+                System.out.println(BanwebParsers.parseSection(section));
+                sections.addLast(BanwebParsers.parseSection(section));
+            }
+            offset += 500;
+        }
+        return sections;
     }
 
     // Scrapes the attributes for a list of catalog courses
@@ -66,23 +75,8 @@ public class BanwebScraper {
                     course.identifier().subject(), course.identifier().number());
             String attributeText = makePOSTRequest("courseSearchResults/getCourseAttributes", params, "", "");
             assert attributeText != null;
-
-            // Parse data
-            ArrayList<Attribute> attributes = new ArrayList<>();
-            Element attributeData = Jsoup.parse(attributeText).getElementsByTag("section").getFirst();
-
-            // Iterate and save attributes
-            for (TextNode node : attributeData.textNodes()) {
-                String attr = node.text().strip();
-                if (attr.equals("No Attribute information available.")) break;
-                int end = attr.lastIndexOf(" ");
-                String name = attr.substring(0, end);
-                String code = attr.substring(end + 1);
-                attributes.addLast(new Attribute(name, code));
-                System.out.println(attributes.getLast());
-            }
-
             // Create new course object with attributes
+            ArrayList<Attribute> attributes = BanwebParsers.parseAttributes(attributeText);
             courses.addLast(new Course(
                     course.identifier(), course.name(), course.description(), course.credit(), course.lecRecLab(),
                     course.semesters(), course.restrictions(), course.corequisites(), course.prerequisites(), attributes
@@ -106,6 +100,7 @@ public class BanwebScraper {
     // Make a POST request to BANWEB's API
     private static String makePOSTRequest(String endpoint, String params, String data, String token) {
         String url = String.format("https://banweb.mtu.edu/StudentRegistrationSelfService/ssb/%s?%s", endpoint, params);
+        System.out.println(data);
         HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url))
                 .POST(HttpRequest.BodyPublishers.ofString(data))
                 .setHeader("Cookie", "JSESSIONID=" + token).build();
