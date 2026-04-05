@@ -166,7 +166,7 @@ public class CatalogParsers {
         return restrictions;
     }
 
-    // Prerequisites a course has
+    // TODO: Prerequisites a course has
     protected static Prerequisites parsePrerequisites(String text) {
         return null;
     }

@@ -14,14 +14,14 @@ public class CatalogScraper {
     private static final String GRADUATE_CATALOG_URL = "https://www.banweb.mtu.edu/pls/owa/stu_ctg_utils.p_online_all_courses_gr";
 
     // Scrape both catalogs
-    public static ArrayList<Course> scrapeCatalogs() {
-        ArrayList<Course> catalog = new ArrayList<>();
+    public static ArrayList<CatalogCourse> scrapeCatalogs() {
+        ArrayList<CatalogCourse> catalog = new ArrayList<>();
         catalog.addAll(scrapeCatalog(UNDERGRADUATE_CATALOG_URL));
         catalog.addAll(scrapeCatalog(GRADUATE_CATALOG_URL));
         return catalog;
     }
 
-    private static ArrayList<Course> scrapeCatalog(String url) {
+    private static ArrayList<CatalogCourse> scrapeCatalog(String url) {
         // Download catalog
         Document catalog;
         try { catalog = Jsoup.connect(url).get(); }
@@ -32,7 +32,7 @@ public class CatalogScraper {
         if (article == null) return null;
 
         // Output array for courses
-        ArrayList<Course> courses = new ArrayList<>();
+        ArrayList<CatalogCourse> courses = new ArrayList<>();
 
         // Properties we'll read from each course
         CourseIdentifierName name = null;
@@ -74,7 +74,7 @@ public class CatalogScraper {
                     assert name != null && courseDescription != null && credit != null && semesters != null;
 
                     // Create course
-                    courses.addLast(new Course(
+                    courses.addLast(new CatalogCourse(
                             name.identifier(), name.name(), courseDescription, credit, lecRecLab, semesters,
                             restrictions, corequisites, prerequisites
                     ));
